@@ -2,6 +2,8 @@ let video;
 let detections = null;
 let state = 1; // 0=arrival(loading page) 1=observtion(proper face detection) 2=misinterpretation(slight error) 3=Escalation(many errros)  4=breakdown(shutdown and revel message)
 
+let cachedDistortions = {}; //to store distorted values
+
 //vars from misinterpretation visuals
 let cols,
   rows,
@@ -262,8 +264,19 @@ function drawState4() {
 }
 
 //this distorts the values
-function distortValue(v, amount) {
-  return constrain(v + random(-amount, amount), 0, 1);
+function distortValue(emotion, v, amount) {
+  if (amount === 0) return v;
+  
+  // only updates values when theres more than a 5% change detected
+  const key = `${emotion}_${state}`;
+  if (!cachedDistortions[key] || abs(v - cachedDistortions[key].original) > 0.05) {
+  let distortAmount = amount * (state === 3 ? 2.5 : state === 2 ? 1.8 : 1);
+  cachedDistortions[key] = {
+    original: v,
+    distorted: constrain(v + random(-distortAmount, distortAmount), 0, 1)
+  };
+  }
+  return cachedDistortions[key].distorted;
 }
 
 //used loop to print all detectable emotions and their values
@@ -274,14 +287,19 @@ function drawEmotions(expressions, errorAmount = 0) {
   textAlign(LEFT, TOP);
 
   let y = 20;
-  for (let emotion in expressions) {
-    let v = expressions[emotion];
-    //distorts it depending on state
-    v = distortValue(v, errorAmount);
-    let value = Math.round(v * 100);
-    text(emotion + ": " + value + "%", 10, y);
-    y += 20;
-  }
+  const sorted = Object.entries(expressions)
+  .map(([emotion, value]) => [emotion, distortValue(emotion, value, errorAmount)])
+  .sort((a, b) => b[1] - a[1]);
+
+for (const [emotion, value] of sorted) {
+  const pct = Math.round(value * 100);
+  text(`${emotion}: ${pct}%`, 10, y);
+  y += 20;
+}
+  const [topEmotion, topValue] = sorted[0];
+textSize(20);
+textAlign(CENTER, BOTTOM);
+text(`Most likely: ${topEmotion} (${Math.round(topValue * 100)}%)`, width / 2, height - 50);
 }
 
 function drawBox(box) {
