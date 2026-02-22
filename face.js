@@ -4,17 +4,6 @@ let state = 1; // 0=arrival(loading page) 1=observtion(proper face detection) 2=
 
 let cachedDistortions = {}; //to store distorted values
 
-//vars from misinterpretation visuals
-let cols,
-  rows,
-  field = [],
-  rez = 20;
-let overlayMix = 0;
-let bandStartMs = 0,
-  currentBand = -1;
-const STABLE_TIME = 9000,
-  RAMP_TIME = 14000;
-
 async function setup() {
   createCanvas(windowWidth, windowHeight);
 
@@ -30,27 +19,6 @@ async function setup() {
 
   // runs detection once every 400, increase if lagging
   setInterval(detectFace, 400);
-
-   //function to initliaze visuals before anything runs
-  initVisuals();
-}
-
-function initVisuals() {
-  cols = ceil(width / rez);
-  rows = ceil(height / rez);
-  field = [];
-  for (let i = 0; i < cols * rows; i++) field[i] = random(TWO_PI);
-  bandStartMs = millis();
-}
-
-//changes color based on the emotions detected
-function getEmotionColor(e, hb) {
-  let boost = map(hb, 0.5, 5, 0, 80);
-  if (e < 0.2) return color(70, 100 + boost, 255);
-  if (e < 0.4) return color(100, 200 + boost, 255);
-  if (e < 0.6) return color(255, 150 + boost, 60);
-  if (e < 0.8) return color(255, 60, 60 + boost);
-  return color(170 + boost, 40, 220);
 }
 
 async function detectFace() {
@@ -110,7 +78,7 @@ function drawState0() {
 }
 
 function drawState1() {
-   //obersavtion emotion detection
+  //obersavtion emotion detection
   if (detections) {
     drawBox(detections.detection.box); //detection box
     drawEmotions(detections.expressions); //emotion values
@@ -121,7 +89,7 @@ function drawState1() {
     let scaleY = height / 480;
 
     // grid that pulses overlay
-    let gridPulse = 0.3 + 0.2 * sin(frameCount * 0.03);
+    let gridPulse = 0.3 + 0.2 * sin(frameCount * 0.008);
     stroke(0, 255, 0, 40 * gridPulse);
     strokeWeight(1);
     for (let x = box.x * scaleX; x < (box.x + box.width) * scaleX; x += 30) {
@@ -153,64 +121,45 @@ function drawState1() {
 }
 
 function drawState2() {
-  //slight error with detection (misinterpretation)
   if (detections) {
-    drawBox(detections.detection.box);
-    drawEmotions(detections.expressions, 0.5); // 50% distortion
-
-    if (detections) {
-      //fades in
-      overlayMix = lerp(overlayMix, 1, 0.03);
-
-      let emotion = 0.5,
-        heartbeat = 1.4;
-      if (detections.expressions) {
-        let top = Object.entries(detections.expressions).sort(
-          (a, b) => b[1] - a[1]
-        )[0];
-        emotion =
-          {
-            neutral: 0.1,
-            happy: 0.35,
-            surprised: 0.55,
-            sad: 0.65,
-            disgusted: 0.85,
-            angry: 0.78,
-            fearful: 0.92,
-          }[top[0]] || 0.5;
-        heartbeat = map(1 - detections.expressions.neutral, 0, 1, 0.7, 4.2);
+    //scanning line glitches
+    for (let i = 0; i < 25; i++) {
+      if (random() < 0.005) {
+        let y = random(height);
+        let h = random(2, 25);
+        let offset = random(-15, 15);
+        copy(0, y, width, h, offset, y, width, h);
       }
-
-      let col = getEmotionColor(emotion, heartbeat);
-
-      //updates the field
-      for (let i = 0; i < field.length; i++) {
-        field[i] += random(-0.03 * heartbeat, 0.03 * heartbeat);
-      }
-
-      //draws flowfield
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          let angle = field[x + y * cols];
-          let px = x * rez + rez / 2,
-            py = y * rez + rez / 2;
-          let dx = cos(angle) * heartbeat * 2,
-            dy = sin(angle) * heartbeat * 2;
-
-          stroke(
-            red(col) + random(-30, 30),
-            green(col) + random(-30, 30),
-            blue(col) + random(-30, 30),
-            180 * overlayMix
-          );
-          strokeWeight(rez * 0.65);
-          line(px, py, px + dx, py + dy);
-        }
-      }
-
-      drawBox(detections.detection.box);
-      drawEmotions(detections.expressions, 0.5);
     }
+    drawBox(detections.detection.box);
+    drawEmotions(detections.expressions, 0.6); //distorts 60% of time
+
+    let box = detections.detection.box;
+    let scaleX = width / 640;
+    let scaleY = height / 480;
+    rection = random() < 0.2 ? 1 : -1;
+
+    // random scanner movment
+    let direction = frameCount % 180 < 90 ? 1 : -1;
+    let scanProgress = abs((frameCount * 0.5 * direction) % box.height);
+
+    for (let i = 0; i < 20; i++) {
+      let trailY = (box.y + scanProgress - i * 2 * direction) * scaleY;
+      let alpha = map(i, 0, 20, 150, 0);
+      stroke(255, 165, 0, alpha);
+      strokeWeight(2);
+      line(box.x * scaleX, trailY, (box.x + box.width) * scaleX, trailY);
+    }
+
+    //glitchy status/progress bar
+    let progress = scanProgress / box.height;
+    if (frameCount % 180 < 30) progress = random(1); 
+    let barY = (box.y + box.height + 10) * scaleY;
+    noStroke();
+    fill(255, 165, 0, 50);
+    rect(box.x * scaleX, barY, box.width * scaleX, 4);
+    fill(255, 165, 0, 200);
+    rect(box.x * scaleX, barY, box.width * scaleX * progress, 4);
   }
 }
 
@@ -223,30 +172,32 @@ function drawState3() {
 }
 
 function drawState4() {
+  //Breakdown visuals
   if (detections) {
-    //adds static noise on top of webcam feed
-    for (let i = 0; i < 3000; i++) {
-      let x = random(width);
-      let y = random(height);
-      stroke(random(255), random() < 0.1 ? 255 : 0);
-      point(x, y);
-    }
-    
     //broken blocks
-    let blockSize = 80;
+    let blockSize = 120;
     for (let y = 0; y < height; y += blockSize) {
       for (let x = 0; x < width; x += blockSize) {
-        if (random() < 0.4) {
+        if (random() < 0.15) {
           let offsetX = random(-20, 20);
           let offsetY = random(-10, 10);
-          copy(x, y, blockSize, blockSize, x + offsetX, y + offsetY, blockSize, blockSize);
+          copy(
+            x,
+            y,
+            blockSize,
+            blockSize,
+            x + offsetX,
+            y + offsetY,
+            blockSize,
+            blockSize
+          );
         }
       }
     }
-    
+
     //glitchy scanning lines
     noFill();
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 6; i++) {
       let y = (frameCount * (5 + i * 3) + i * 60) % height;
       let thickness = random(3, 15);
       stroke(0, random(150, 255));
@@ -256,25 +207,24 @@ function drawState4() {
       strokeWeight(thickness * 0.5);
       line(0, y + 1, width, y + 1);
     }
-    
-    drawBox(detections.detection.box);
-    drawEmotions(detections.expressions, 1);
   }
-  
 }
 
 //this distorts the values
 function distortValue(emotion, v, amount) {
   if (amount === 0) return v;
-  
+
   // only updates values when theres more than a 5% change detected
   const key = `${emotion}_${state}`;
-  if (!cachedDistortions[key] || abs(v - cachedDistortions[key].original) > 0.05) {
-  let distortAmount = amount * (state === 3 ? 2.5 : state === 2 ? 1.8 : 1);
-  cachedDistortions[key] = {
-    original: v,
-    distorted: constrain(v + random(-distortAmount, distortAmount), 0, 1)
-  };
+  if (
+    !cachedDistortions[key] ||
+    abs(v - cachedDistortions[key].original) > 0.05
+  ) {
+    let distortAmount = amount * (state === 3 ? 2.5 : state === 2 ? 1.8 : 1);
+    cachedDistortions[key] = {
+      original: v,
+      distorted: constrain(v + random(-distortAmount, distortAmount), 0, 1),
+    };
   }
   return cachedDistortions[key].distorted;
 }
@@ -288,18 +238,25 @@ function drawEmotions(expressions, errorAmount = 0) {
 
   let y = 20;
   const sorted = Object.entries(expressions)
-  .map(([emotion, value]) => [emotion, distortValue(emotion, value, errorAmount)])
-  .sort((a, b) => b[1] - a[1]);
+    .map(([emotion, value]) => [
+      emotion,
+      distortValue(emotion, value, errorAmount),
+    ])
+    .sort((a, b) => b[1] - a[1]);
 
-for (const [emotion, value] of sorted) {
-  const pct = Math.round(value * 100);
-  text(`${emotion}: ${pct}%`, 10, y);
-  y += 20;
-}
+  for (const [emotion, value] of sorted) {
+    const pct = Math.round(value * 100);
+    text(`${emotion}: ${pct}%`, 10, y);
+    y += 20;
+  }
   const [topEmotion, topValue] = sorted[0];
-textSize(20);
-textAlign(CENTER, BOTTOM);
-text(`Most likely: ${topEmotion} (${Math.round(topValue * 100)}%)`, width / 2, height - 50);
+  textSize(20);
+  textAlign(CENTER, BOTTOM);
+  text(
+    `Most likely: ${topEmotion} (${Math.round(topValue * 100)}%)`,
+    width / 2,
+    height - 50
+  );
 }
 
 function drawBox(box) {
@@ -311,7 +268,9 @@ function drawBox(box) {
 
   //misinterpreation=orange
   if (state === 2)
-    stroke(frameCount % 10 < 8 ? color(255, 165, 0) : color(255, 165, 0, 50));
+    stroke(
+      frameCount % 135 < 118 ? color(255, 165, 0) : color(255, 165, 0, 50)
+    );
 
   // escalaton =red
   if (state === 3)
@@ -320,7 +279,7 @@ function drawBox(box) {
   //breakdown = white
   if (state === 4) stroke(255);
 
-  strokeWeight(2);
+  strokeWeight(4);
   let scaleX = width / 640;
   let scaleY = height / 480;
   rect(box.x * scaleX, box.y * scaleY, box.width * scaleX, box.height * scaleY);
