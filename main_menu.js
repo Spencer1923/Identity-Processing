@@ -112,11 +112,15 @@ function drawTitle(){
 
   fill(255);
   textSize(60);
-  text("Identity: Processing", width/2, height/3);
+  text("False Prophecy:", width/2, height/3);
 
-  textSize(18);
+   textSize(28);
+  fill(240);
+  text("The Fortune Teller that misreads you", width/2, height/3 + 50);
+
+  textSize(16);
   fill(200);
-  text("Step closer and our metrics will begin to read you now but please remain still while I interpret your presence.", width/2, height/3 + 40);
+  text("Step closer and our metrics will begin to read you now but please remain still while I interpret your presence.", width/2, height/3 + 90);
 }
 
 // Glitch

@@ -255,7 +255,7 @@ function drawTitle() {
   // 2) 
   textSize(18);
   fill(220, 200, 255, 190);
-  drawTextOnArc("Identity: Processing", cx + jx, cy + jy, innerRingR * 1.06, -PI * 0.78, -PI * 0.22);
+  drawTextOnArc("False Prophecy", cx + jx, cy + jy, innerRingR * 1.06, -PI * 0.78, -PI * 0.22);
 }
 
 function drawTextOnArc(str, cx, cy, radius, startAng, endAng) {
