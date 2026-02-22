@@ -2,6 +2,7 @@ let video;
 let detections = null;
 let state = 1; // 0=arrival(loading page) 1=observtion(proper face detection) 2=misinterpretation(slight error) 3=Escalation(many errros)  4=breakdown(shutdown and revel message)
 
+//vars from misinterpretation visuals
 let cols,
   rows,
   field = [],
@@ -28,6 +29,7 @@ async function setup() {
   // runs detection once every 400, increase if lagging
   setInterval(detectFace, 400);
 
+   //function to initliaze visuals before anything runs
   initVisuals();
 }
 
@@ -39,6 +41,7 @@ function initVisuals() {
   bandStartMs = millis();
 }
 
+//changes color based on the emotions detected
 function getEmotionColor(e, hb) {
   let boost = map(hb, 0.5, 5, 0, 80);
   if (e < 0.2) return color(70, 100 + boost, 255);
@@ -96,6 +99,7 @@ function draw() {
   textSize(32);
   text(stateTitles[state], width / 2, 40);
 
+  //function to display back button
   goBackButton();
 }
 
@@ -104,7 +108,7 @@ function drawState0() {
 }
 
 function drawState1() {
-  //emotion detection
+   //obersavtion emotion detection
   if (detections) {
     drawBox(detections.detection.box); //detection box
     drawEmotions(detections.expressions); //emotion values
@@ -147,13 +151,13 @@ function drawState1() {
 }
 
 function drawState2() {
-  //slight error with detection
+  //slight error with detection (misinterpretation)
   if (detections) {
     drawBox(detections.detection.box);
     drawEmotions(detections.expressions, 0.5); // 50% distortion
 
     if (detections) {
-      // Fade in flowfield
+      //fades in
       overlayMix = lerp(overlayMix, 1, 0.03);
 
       let emotion = 0.5,
@@ -177,12 +181,12 @@ function drawState2() {
 
       let col = getEmotionColor(emotion, heartbeat);
 
-      // Update field
+      //updates the field
       for (let i = 0; i < field.length; i++) {
         field[i] += random(-0.03 * heartbeat, 0.03 * heartbeat);
       }
 
-      // Draw flowfield
+      //draws flowfield
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
           let angle = field[x + y * cols];
@@ -217,19 +221,44 @@ function drawState3() {
 }
 
 function drawState4() {
-  //final state/reveal
   if (detections) {
+    //adds static noise on top of webcam feed
+    for (let i = 0; i < 3000; i++) {
+      let x = random(width);
+      let y = random(height);
+      stroke(random(255), random() < 0.1 ? 255 : 0);
+      point(x, y);
+    }
+    
+    //broken blocks
+    let blockSize = 80;
+    for (let y = 0; y < height; y += blockSize) {
+      for (let x = 0; x < width; x += blockSize) {
+        if (random() < 0.4) {
+          let offsetX = random(-20, 20);
+          let offsetY = random(-10, 10);
+          copy(x, y, blockSize, blockSize, x + offsetX, y + offsetY, blockSize, blockSize);
+        }
+      }
+    }
+    
+    //glitchy scanning lines
+    noFill();
+    for (let i = 0; i < 8; i++) {
+      let y = (frameCount * (5 + i * 3) + i * 60) % height;
+      let thickness = random(3, 15);
+      stroke(0, random(150, 255));
+      strokeWeight(thickness);
+      line(0, y, width, y);
+      stroke(255, random(100, 200));
+      strokeWeight(thickness * 0.5);
+      line(0, y + 1, width, y + 1);
+    }
+    
     drawBox(detections.detection.box);
-    drawEmotions(detections.expressions, 1); // 100% distortion
+    drawEmotions(detections.expressions, 1);
   }
-  fill(255);
-  textAlign(CENTER, CENTER);
-  textSize(13);
-  text(
-    "I am recalibrating your identity. Your signals are unstable. Interpretation complete. You have been categorized.",
-    width / 2,
-    height - 30
-  );
+  
 }
 
 //this distorts the values
