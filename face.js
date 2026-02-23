@@ -153,7 +153,7 @@ function drawState2() {
 
     //glitchy status/progress bar
     let progress = scanProgress / box.height;
-    if (frameCount % 180 < 30) progress = random(1); 
+    if (frameCount % 180 < 30) progress = random(1);
     let barY = (box.y + box.height + 10) * scaleY;
     noStroke();
     fill(255, 165, 0, 50);
@@ -166,8 +166,51 @@ function drawState2() {
 function drawState3() {
   //many errors with detection
   if (detections) {
+    //red screen glitches
+    for (let i = 0; i < 17; i++) {
+      if (random() < 0.008) {
+        let y = random(height);
+        let h = random(2, 25);
+        let offset = random(-30, 30);
+        copy(0, y, width, h, offset, y, width, h);
+        noStroke();
+        fill(255, 0, 0, 80);
+        rect(0, y, width, h);
+      }
+    }
+
+    //red flashes/pulses liek an alarm
+    if (frameCount % 60 < 15) {
+      noStroke();
+      fill(255, 0, 0, 80);
+      rect(0, 0, width, height);
+    }
+
     drawBox(detections.detection.box);
-    drawEmotions(detections.expressions, 0.75); // 75% distortion
+    drawEmotions(detections.expressions, 90); //90% distortion
+
+    let box = detections.detection.box;
+    let scaleX = width / 640;
+    let scaleY = height / 480;
+
+    //scanner that malfunctions
+    let scanProgress = (frameCount * random(0.3, 2)) % box.height;
+    for (let i = 0; i < 10; i++) {
+      let trailY = (box.y + scanProgress - i * random(1, 4)) * scaleY;
+      let alpha = map(i, 0, 20, 150, 0);
+      stroke(255, 0, 0, alpha);
+      strokeWeight(2);
+      line(box.x * scaleX, trailY, (box.x + box.width) * scaleX, trailY);
+    }
+
+    //broken progression bar
+    let progress = random(1);
+    let barY = (box.y + box.height + 10) * scaleY;
+    noStroke();
+    fill(255, 0, 0, 50);
+    rect(box.x * scaleX, barY, box.width * scaleX, 4);
+    fill(255, 0, 0, 200);
+    rect(box.x * scaleX, barY, box.width * scaleX * progress, 4);
   }
 }
 
@@ -218,7 +261,7 @@ function distortValue(emotion, v, amount) {
   const key = `${emotion}_${state}`;
   if (
     !cachedDistortions[key] ||
-    abs(v - cachedDistortions[key].original) > 0.05
+    abs(v - cachedDistortions[key].original) > 0.10
   ) {
     let distortAmount = amount * (state === 3 ? 2.5 : state === 2 ? 1.8 : 1);
     cachedDistortions[key] = {
