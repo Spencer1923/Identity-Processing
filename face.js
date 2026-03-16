@@ -240,6 +240,7 @@ let st9TearLines = [];
 // ----------------------------------
 
 async function setup() {
+  userStartAudio();
   createCanvas(windowWidth, windowHeight);
   video = createCapture(VIDEO);
   video.size(windowWidth, windowHeight);
