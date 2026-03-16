@@ -451,19 +451,17 @@ function draw() {
     } else {
       // Start audio on any emotion
       if (
-        happyStart ||
-        angryStart ||
-        surprisedStart ||
-        neutralStart ||
-        fearfulStart ||
-        sadStart ||
-        disgustedStart
+        state !== 9 &&
+        (happyStart ||
+          angryStart ||
+          surprisedStart ||
+          neutralStart ||
+          fearfulStart ||
+          sadStart ||
+          disgustedStart)
       ) {
-       
         audioPlaying = true;
         playAudio();
-        
-        //console.log("Audio started");
       }
     }
 
@@ -2784,7 +2782,7 @@ function distortValue(emotion, v, amount) {
 
 //plays audio each state plus a random delay
 function playAudio() {
-   console.log("playAudio called, state:", state)
+  console.log("playAudio called, state:", state);
   let audio = new Audio("data/audio_" + state + ".mp3");
   audioStartTime = millis();
 
@@ -2822,7 +2820,7 @@ function determineTransition() {
   let jumps = {
     1: {
       happy: 1,
-      neutral: 9,
+      neutral: 0,
       angry: 2,
       surprised: 1,
       fearful: 2,
