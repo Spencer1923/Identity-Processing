@@ -44,7 +44,7 @@ let audio9 = null; //deafult so no loop
 const happyThreshold = 0.8;
 const angryThreshold = 0.3;
 const surprisedThreshold = 0.4;
-const neutralThreshold = 0.75;
+const neutralThreshold = 0.8;
 const fearfulThreshold = 0.5;
 const sadThreshold = 0.5;
 const disgustedThreshold = 0.5;
@@ -3779,7 +3779,7 @@ class State9TearLine {
 async function setup() {
   createCanvas(windowWidth, windowHeight);
   video = createCapture(VIDEO);
-  video.size(windowWidth, windowHeight);
+  video.size(width, height);
   video.hide();
 
   const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
@@ -3862,7 +3862,13 @@ async function detectFace() {
 
     // updates distortions
     for (let emotion in e) {
-      distortedCache[emotion] = distortValue(emotion, e[emotion]);
+      let newVal = distortValue(emotion, e[emotion]);
+
+      distortedCache[emotion] = lerp(
+        distortedCache[emotion] || newVal,
+        newVal,
+        0.2
+      );
     }
   }
 }
@@ -3876,7 +3882,12 @@ function draw() {
       break;
     case 1:
       image(video, 0, 0, width, height);
-      drawState1();
+      if (neutralStall) {
+        drawNeutralStallScreen();
+        return;
+      } else {
+        drawState1();
+      }
       break;
     case 2:
       image(video, 0, 0, width, height);
@@ -4035,7 +4046,7 @@ function draw() {
       if (happyStart) emotionPoints.happy += 1 / 120; // 1pt per 2sec
       if (angryStart) emotionPoints.angry += 1 / 60; // 1pt per 1sec
       if (surprisedStart) emotionPoints.surprised += 1 / 120; // 1pt per 2sec
-      if (neutralStart) emotionPoints.neutral += 1 / 72; // 1pt per 12sec
+      if (neutralStart) emotionPoints.neutral += 1 / 420; // 1pt per 7sec
       if (fearfulStart) emotionPoints.fearful += 1 / 60; // 1pt per 1sec
       if (sadStart) emotionPoints.sad += 1 / 60; // 1pt per 1sec
       if (disgustedStart) emotionPoints.disgusted += 1 / 60; // 1pt per 1sec
@@ -4135,8 +4146,8 @@ function distortValue(emotion, v, amount) {
   //defaults to 0.5 if theres a logic error
   corruption = corruptionByState[state] ?? 0.5;
 
-  //creates random value
-  let randomValue = random();
+  //creates random value with no flicker
+  let randomValue = noise(frameCount * 0.02 + emotion.length * 10);
 
   // blends real value with random value
   let distorted = lerp(v, randomValue, corruption);
@@ -4853,4 +4864,28 @@ function updateDots() {
     dots = (dots + 1) % 4;
     lastDotChange = millis();
   }
+}
+
+//recalibrates canvas based on screen size
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  video.size(width, height);
+
+  obsCols = ceil(width / obsRez);
+  obsRows = ceil(height / obsRez);
+  obsField = [];
+
+  for (let i = 0; i < obsCols * obsRows; i++) {
+    obsField[i] = random(TWO_PI);
+  }
+
+  st5NoiseLayer = createGraphics(width, height);
+  st5SceneLayer = createGraphics(width, height);
+
+  makeState5NoiseLayer();
+
+  initState6Scene();
+  makeState7Buffer();
+
+  pixelDensity(1);
 }
